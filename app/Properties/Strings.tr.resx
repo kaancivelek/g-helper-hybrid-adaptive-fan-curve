@@ -881,4 +881,22 @@ Yine de devam etmek istiyor musunuz?</value>
   <data name="AmbientModeResources" xml:space="preserve">
     <value>Ambient mode may increase resource usage</value>
   </data>
+    <data name="CrossFan_Enable" xml:space="preserve">
+    <value>Akıllı Çapraz Fandır</value>
+  </data>
+  <data name="CrossFan_Enable_Tooltip" xml:space="preserve">
+    <value>Bir bileşen sıcak olduğunda Akıllı Çapraz Fandır geçersiz kılmasını etkinleştir.</value>
+  </data>
+  <data name="CrossFan_TempLabel" xml:space="preserve">
+    <value>Eşik (°C):</value>
+  </data>
+  <data name="CrossFan_TempTooltip" xml:space="preserve">
+    <value>Çapraz fan yardımcısının devreye girdiği sıcaklık.</value>
+  </data>
+  <data name="CrossFan_HystLabel" xml:space="preserve">
+    <value>Histerezis (°C):</value>
+  </data>
+  <data name="CrossFan_HystTooltip" xml:space="preserve">
+    <value>Avlanmayı önlemek için histerezis.</value>
+  </data>
 </root>

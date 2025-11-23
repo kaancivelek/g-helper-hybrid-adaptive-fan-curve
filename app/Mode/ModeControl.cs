@@ -1,4 +1,5 @@
-﻿using GHelper.Gpu.NVidia;
+﻿using GHelper.Fan;
+using GHelper.Gpu.NVidia;
 using GHelper.Helpers;
 using GHelper.USB;
 using Ryzen;
@@ -28,7 +29,71 @@ namespace GHelper.Mode
             reapplyTimer.Elapsed += ReapplyTimer_Elapsed;
         }
 
+        public void AutoFans(bool force = false)
+        {
+            customFans = false;
 
+            if (AppConfig.IsMode("auto_apply") || force)
+            {
+
+                bool xgmFan = false;
+                if (AppConfig.Is("xgm_fan") && Program.acpi.IsXGConnected())
+                {
+                    XGM.SetFan(AppConfig.GetFanConfig(AsusFan.XGM));
+                    xgmFan = true;
+                }
+
+                int cpuResult = Program.acpi.SetFanCurve(AsusFan.CPU, AppConfig.GetFanConfig(AsusFan.CPU));
+                int gpuResult = Program.acpi.SetFanCurve(AsusFan.GPU, AppConfig.GetFanConfig(AsusFan.GPU));
+
+                if (AppConfig.Is("mid_fan"))
+                    Program.acpi.SetFanCurve(AsusFan.Mid, AppConfig.GetFanConfig(AsusFan.Mid));
+
+
+                // Alternative way to set fan curve
+                if (cpuResult != 1 || gpuResult != 1)
+                {
+                    cpuResult = Program.acpi.SetFanRange(AsusFan.CPU, AppConfig.GetFanConfig(AsusFan.CPU));
+                    gpuResult = Program.acpi.SetFanRange(AsusFan.GPU, AppConfig.GetFanConfig(AsusFan.GPU));
+
+                    // Something went wrong, resetting to default profile
+                    if (cpuResult != 1 || gpuResult != 1)
+                    {
+                        Program.acpi.DeviceSet(AsusACPI.PerformanceMode, Modes.GetCurrentBase(), "Reset Mode");
+                        settings.LabelFansResult("Model doesn't support custom fan curves");
+                    }
+                }
+                else
+                {
+                    settings.LabelFansResult("");
+                    customFans = true;
+                }
+
+                // force set PPTs for missbehaving bios on FX507/517 series
+                if ((AppConfig.IsPowerRequired() || xgmFan) && !AppConfig.IsMode("auto_apply_power"))
+                {
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                        Program.acpi.DeviceSet(AsusACPI.PPT_APUA0, 80, "PowerLimit Fix A0");
+                        Program.acpi.DeviceSet(AsusACPI.PPT_APUA3, 80, "PowerLimit Fix A3");
+                    });
+                }
+
+            }
+
+            SetModeLabel();
+
+            // Yeni: Smart Cross-Fan Sync - yalnızca AppConfig "cross_fan" etkinse çalışır
+            try
+            {
+                SmartCrossFan.Apply();
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLine("SmartCrossFan error: " + ex.ToString());
+            }
+        }
         private void ReapplyTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             SetCPUTemp(AppConfig.GetMode("cpu_temp"));
@@ -94,7 +159,7 @@ namespace GHelper.Mode
                     await Task.Delay(TimeSpan.FromMilliseconds(1500));
                 }
 
-                if (AppConfig.Is("status_mode")) Program.acpi.DeviceSet(AsusACPI.StatusMode, [0x00, Modes.GetBase(mode) == AsusACPI.PerformanceSilent ? (byte)0x02 : (byte)0x03], "StatusMode");
+                if (AppConfig.Is("status_mode")) Program.acpi.DeviceSet(AsusACPI.StatusMode, new byte[] { (byte)0x00, Modes.GetBase(mode) == AsusACPI.PerformanceSilent ? (byte)0x02 : (byte)0x03 }, "StatusMode");
                 int status = Program.acpi.DeviceSet(AsusACPI.PerformanceMode, AppConfig.IsManualModeRequired() ? AsusACPI.PerformanceManual : Modes.GetBase(mode), "Mode");
                 // Vivobook fallback
                 if (status != 1) Program.acpi.SetVivoMode(Modes.GetBase(mode));
@@ -127,7 +192,7 @@ namespace GHelper.Mode
 
             // CPU Boost setting override
             if (AppConfig.GetMode("auto_boost") != -1)
-                    PowerNative.SetCPUBoost(AppConfig.GetMode("auto_boost"));
+                PowerNative.SetCPUBoost(AppConfig.GetMode("auto_boost"));
 
             settings.FansInit();
         }
@@ -161,63 +226,6 @@ namespace GHelper.Mode
             {
                 SetPerformanceMode(Modes.GetNext(back), true);
             }
-
-        }
-
-        public void AutoFans(bool force = false)
-        {
-            customFans = false;
-
-            if (AppConfig.IsMode("auto_apply") || force)
-            {
-
-                bool xgmFan = false;
-                if (AppConfig.Is("xgm_fan") && Program.acpi.IsXGConnected())
-                {
-                    XGM.SetFan(AppConfig.GetFanConfig(AsusFan.XGM));
-                    xgmFan = true;
-                }
-
-                int cpuResult = Program.acpi.SetFanCurve(AsusFan.CPU, AppConfig.GetFanConfig(AsusFan.CPU));
-                int gpuResult = Program.acpi.SetFanCurve(AsusFan.GPU, AppConfig.GetFanConfig(AsusFan.GPU));
-
-                if (AppConfig.Is("mid_fan"))
-                    Program.acpi.SetFanCurve(AsusFan.Mid, AppConfig.GetFanConfig(AsusFan.Mid));
-
-
-                // Alternative way to set fan curve
-                if (cpuResult != 1 || gpuResult != 1)
-                {
-                    cpuResult = Program.acpi.SetFanRange(AsusFan.CPU, AppConfig.GetFanConfig(AsusFan.CPU));
-                    gpuResult = Program.acpi.SetFanRange(AsusFan.GPU, AppConfig.GetFanConfig(AsusFan.GPU));
-
-                    // Something went wrong, resetting to default profile
-                    if (cpuResult != 1 || gpuResult != 1)
-                    {
-                        Program.acpi.DeviceSet(AsusACPI.PerformanceMode, Modes.GetCurrentBase(), "Reset Mode");
-                        settings.LabelFansResult("Model doesn't support custom fan curves");
-                    }
-                }
-                else
-                {
-                    settings.LabelFansResult("");
-                    customFans = true;
-                }
-
-                // force set PPTs for missbehaving bios on FX507/517 series
-                if ((AppConfig.IsPowerRequired() || xgmFan) && !AppConfig.IsMode("auto_apply_power"))
-                {
-                    Task.Run(async () =>
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(1));
-                        Program.acpi.DeviceSet(AsusACPI.PPT_APUA0, 80, "PowerLimit Fix A0");
-                        Program.acpi.DeviceSet(AsusACPI.PPT_APUA3, 80, "PowerLimit Fix A3");
-                    });
-                }
-
-            }
-
-            SetModeLabel();
 
         }
 
@@ -475,7 +483,7 @@ namespace GHelper.Mode
         public void ShutdownReset()
         {
             if (!AppConfig.IsShutdownReset()) return;
-            Program.acpi.DeviceSet(AsusACPI.PerformanceMode,AsusACPI.PerformanceBalanced, "Mode Reset");
+            Program.acpi.DeviceSet(AsusACPI.PerformanceMode, AsusACPI.PerformanceBalanced, "Mode Reset");
         }
 
     }

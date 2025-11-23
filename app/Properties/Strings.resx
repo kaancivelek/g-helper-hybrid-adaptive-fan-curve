@@ -881,4 +881,22 @@ Do you still want to continue?</value>
   <data name="AmbientModeResources" xml:space="preserve">
     <value>Ambient mode may increase resource usage</value>
   </data>
+    <data name="CrossFan_Enable" xml:space="preserve">
+    <value>Smart Cross-Fan</value>
+  </data>
+  <data name="CrossFan_Enable_Tooltip" xml:space="preserve">
+    <value>Enable Smart Cross-Fan override when one component is hot.</value>
+  </data>
+  <data name="CrossFan_TempLabel" xml:space="preserve">
+    <value>Threshold (°C):</value>
+  </data>
+  <data name="CrossFan_TempTooltip" xml:space="preserve">
+    <value>Temperature above which cross-fan helper engages.</value>
+  </data>
+  <data name="CrossFan_HystLabel" xml:space="preserve">
+    <value>Hysteresis (°C):</value>
+  </data>
+  <data name="CrossFan_HystTooltip" xml:space="preserve">
+    <value>Hysteresis to avoid hunting.</value>
+  </data>
 </root>
